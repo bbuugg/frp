@@ -31,6 +31,7 @@ type Manager struct {
 	pingPlugins        []Plugin
 	newWorkConnPlugins []Plugin
 	newUserConnPlugins []Plugin
+	*ManagerExtends
 }
 
 func NewManager() *Manager {
@@ -41,6 +42,7 @@ func NewManager() *Manager {
 		pingPlugins:        make([]Plugin, 0),
 		newWorkConnPlugins: make([]Plugin, 0),
 		newUserConnPlugins: make([]Plugin, 0),
+		ManagerExtends:     managerExtends,
 	}
 }
 
@@ -63,6 +65,7 @@ func (m *Manager) Register(p Plugin) {
 	if p.IsSupport(OpNewUserConn) {
 		m.newUserConnPlugins = append(m.newUserConnPlugins, p)
 	}
+	registerExtendsPlugin(m, p)
 }
 
 func (m *Manager) Login(content *LoginContent) (*LoginContent, error) {

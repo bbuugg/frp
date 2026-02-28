@@ -360,6 +360,8 @@ func (ctl *Control) worker() {
 		}()
 	}
 
+	extendControl(ctl)
+
 	metrics.Server.CloseClient()
 	ctl.clientRegistry.MarkOfflineByRunID(ctl.runID)
 	xl.Infof("client exit success")

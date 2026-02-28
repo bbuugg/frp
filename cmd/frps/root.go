@@ -33,6 +33,7 @@ import (
 
 var (
 	cfgFile          string
+	registryAddress  string
 	showVersion      bool
 	strictConfigMode bool
 	allowUnsafe      []string
@@ -47,6 +48,8 @@ func init() {
 	rootCmd.PersistentFlags().StringSliceVarP(&allowUnsafe, "allow-unsafe", "", []string{},
 		fmt.Sprintf("allowed unsafe features, one or more of: %s", strings.Join(security.ServerUnsafeFeatures, ", ")))
 
+	rootCmd.PersistentFlags().StringVarP(&registryAddress, "registry", "r", "", "address of registry service")
+
 	config.RegisterServerConfigFlags(rootCmd, &serverCfg)
 }
 
@@ -57,6 +60,11 @@ var rootCmd = &cobra.Command{
 		if showVersion {
 			fmt.Println(version.Full())
 			return nil
+		}
+
+		if registryAddress == "" {
+			fmt.Println("registry address is required")
+			os.Exit(1)
 		}
 
 		var (
@@ -93,6 +101,8 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		go runRegister(registryAddress, svrCfg)
+		fmt.Println("continue")
 		if err := runServer(svrCfg); err != nil {
 			fmt.Println(err)
 			os.Exit(1)

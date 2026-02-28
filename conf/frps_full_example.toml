@@ -156,6 +156,14 @@ natholeAnalysisDataReserveHours = 168
 # sshTunnelGateway.autoGenPrivateKeyPath = ""
 # sshTunnelGateway.authorizedKeysFile = "/home/frp-user/.ssh/authorized_keys"
 
+# Registry configuration
+# Enable registry integration
+registry.enable = false
+# Address of the registry service
+registry.address = "localhost:50051"
+# Name of this node in the registry
+registry.nodeName = "frps-node-1"
+
 [[httpPlugins]]
 name = "user-manager"
 addr = "127.0.0.1:9000"
