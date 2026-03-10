@@ -33,8 +33,6 @@ import (
 
 var (
 	cfgFile          string
-	panelURL         string
-	panelSecret      string
 	showVersion      bool
 	strictConfigMode bool
 	allowUnsafe      []string
@@ -48,10 +46,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "strict config parsing mode, unknown fields will cause errors")
 	rootCmd.PersistentFlags().StringSliceVarP(&allowUnsafe, "allow-unsafe", "", []string{},
 		fmt.Sprintf("allowed unsafe features, one or more of: %s", strings.Join(security.ServerUnsafeFeatures, ", ")))
-
-	// Panel connection flags: frps actively connects to panel as a managed node.
-	rootCmd.PersistentFlags().StringVar(&panelURL, "panel-url", "", "WebSocket URL of the panel (e.g. ws://panel-host:7200/ws/node)")
-	rootCmd.PersistentFlags().StringVar(&panelSecret, "panel-secret", "", "secret token for authenticating this node with the panel")
 
 	config.RegisterServerConfigFlags(rootCmd, &serverCfg)
 }
@@ -99,7 +93,12 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := runServer(svrCfg, panelURL, panelSecret); err != nil {
+		if err := validatePanelConfig(svrCfg); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		if err := runServer(svrCfg); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
@@ -114,7 +113,21 @@ func Execute() {
 	}
 }
 
-func runServer(cfg *v1.ServerConfig, panelURL, panelSecret string) (err error) {
+func validatePanelConfig(cfg *v1.ServerConfig) error {
+	missing := make([]string, 0, 2)
+	if cfg.Panel.URL == "" {
+		missing = append(missing, "panel.url")
+	}
+	if cfg.Panel.Token == "" {
+		missing = append(missing, "panel.token")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("frps requires managed panel config in config file: missing %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+func runServer(cfg *v1.ServerConfig) (err error) {
 	log.InitLogger(cfg.Log.To, cfg.Log.Level, int(cfg.Log.MaxDays), cfg.Log.DisablePrintColor)
 
 	if cfgFile != "" {
@@ -128,6 +141,6 @@ func runServer(cfg *v1.ServerConfig, panelURL, panelSecret string) (err error) {
 		return err
 	}
 	log.Infof("frps started successfully")
-	svr.Run(context.Background(), panelURL, panelSecret)
+	svr.Run(context.Background())
 	return
 }

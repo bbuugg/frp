@@ -56,6 +56,29 @@ const jsonServerContent = `
 }
 `
 
+const tomlServerPanelContent = `
+bindAddr = "127.0.0.1"
+panel.url = "ws://127.0.0.1:7200/ws/node"
+panel.token = "node-token"
+`
+
+const yamlServerPanelContent = `
+bindAddr: 127.0.0.1
+panel:
+  url: ws://127.0.0.1:7200/ws/node
+  token: node-token
+`
+
+const jsonServerPanelContent = `
+{
+  "bindAddr": "127.0.0.1",
+  "panel": {
+    "url": "ws://127.0.0.1:7200/ws/node",
+    "token": "node-token"
+  }
+}
+`
+
 func TestLoadServerConfig(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -77,6 +100,27 @@ func TestLoadServerConfig(t *testing.T) {
 			require.EqualValues(7005, svrCfg.TCPMuxHTTPConnectPort)
 			require.EqualValues("/abc.html", svrCfg.Custom404Page)
 			require.EqualValues(10, svrCfg.Transport.TCPKeepAlive)
+		})
+	}
+}
+
+func TestLoadServerConfigPanel(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+	}{
+		{"toml", tomlServerPanelContent},
+		{"yaml", yamlServerPanelContent},
+		{"json", jsonServerPanelContent},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require := require.New(t)
+			svrCfg := v1.ServerConfig{}
+			err := LoadConfigure([]byte(test.content), &svrCfg, true)
+			require.NoError(err)
+			require.EqualValues("ws://127.0.0.1:7200/ws/node", svrCfg.Panel.URL)
+			require.EqualValues("node-token", svrCfg.Panel.Token)
 		})
 	}
 }

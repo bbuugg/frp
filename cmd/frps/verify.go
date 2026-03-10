@@ -53,6 +53,10 @@ var verifyCmd = &cobra.Command{
 			fmt.Println(err)
 			os.Exit(1)
 		}
+		if err := validatePanelConfig(svrCfg); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 		fmt.Printf("frps: the configuration file %s syntax is ok\n", cfgFile)
 		return nil
 	},

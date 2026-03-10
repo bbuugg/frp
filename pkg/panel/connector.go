@@ -89,7 +89,7 @@ type StatsGetter interface {
 // ─── Connector ─────────────────────────────────────────────────────────────────
 
 // Connector maintains a persistent WebSocket connection from frps to the panel.
-// When panel-url and panel-secret are both non-empty, Start() will keep the
+// When panel.url and panel.token are both configured, Start() will keep the
 // connection alive with the same back-off strategy used by frpc.
 type Connector struct {
 	panelURL string

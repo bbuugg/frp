@@ -23,6 +23,7 @@ import (
 
 type ServerConfig struct {
 	APIMetadata
+	Panel PanelConnectorConfig `json:"panel,omitempty"`
 
 	Auth AuthServerConfig `json:"auth,omitempty"`
 	// BindAddr specifies the address that the server binds to. By default,
@@ -96,6 +97,11 @@ type ServerConfig struct {
 	AllowPorts []types.PortsRange `json:"allowPorts,omitempty"`
 
 	HTTPPlugins []HTTPPluginOptions `json:"httpPlugins,omitempty"`
+}
+
+type PanelConnectorConfig struct {
+	URL   string `json:"url,omitempty"`
+	Token string `json:"token,omitempty"`
 }
 
 func (c *ServerConfig) Complete() error {

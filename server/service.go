@@ -356,19 +356,19 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 	return svr, nil
 }
 
-// Run starts the service. panelURL and panelSecret are optional; when both are
-// non-empty frps will maintain a persistent WebSocket connection to the panel so
-// it appears as a live node.
-func (svr *Service) Run(ctx context.Context, panelURL, panelSecret string) {
+// Run starts the service. When panel.url and panel.token are configured, frps
+// will maintain a persistent WebSocket connection to the panel so it appears
+// as a live managed node.
+func (svr *Service) Run(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	svr.ctx = ctx
 	svr.cancel = cancel
 
 	// Start panel connector if configured.
-	if panelURL != "" && panelSecret != "" {
-		pc := panel.NewConnector(ctx, panelURL, panelSecret, svr)
+	if svr.cfg.Panel.URL != "" && svr.cfg.Panel.Token != "" {
+		pc := panel.NewConnector(ctx, svr.cfg.Panel.URL, svr.cfg.Panel.Token, svr)
 		pc.Start()
-		log.Infof("panel connector started, connecting to %s", panelURL)
+		log.Infof("panel connector started, connecting to %s", svr.cfg.Panel.URL)
 	}
 
 	// run dashboard web server.
